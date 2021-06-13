@@ -29,67 +29,88 @@ class ResultTest(Enum):
 
 
 def load_library(library_name):
+    """load the library"""
     return ctypes.CDLL(library_name)
 
 
 def log_test_results(msg):
+    """print the error message into the log"""
     log.error("{} - expected result: {}, actual result: {}".format(msg[0], msg[1], msg[2]))
 
 
 def test_1_hash_init():
+    """test 'uint32_t HashInit()' - positive test case"""
     library = load_library("libhash.so")
+
     result = library.HashInit()
     expected_result = ResultTest.HASH_ERROR_OK
+
     msg = "test_1_hash_init()", expected_result.name, ResultTest(result).name
     return result == expected_result.value, msg
 
 
 def test_2_hash_init():
+    """test 'uint32_t HashInit()' - negative test case (an unexpected argument 'x')"""
     library = load_library("libhash.so")
     x = ctypes.c_size_t(1)
+
     result = library.HashInit(x)
     expected_result = ResultTest.HASH_ERROR_EXCEPTION
+
     msg = "test_2_hash_init()", expected_result.name, ResultTest(result).name
     return result == expected_result.value, msg
 
 
 def test_3_hash_init():
+    """test 'uint32_t HashInit()' - negative test case (call the HashInit() twice)"""
     library = load_library("libhash.so")
     library.HashInit()
+
     result = library.HashInit()
     expected_result = ResultTest.HASH_ERROR_ALREADY_INITIALIZED
+
     msg = "test_3_hash_init()", expected_result.name, ResultTest(result).name
     return result == expected_result.value,  msg
 
 
 def test_4_hash_terminate():
+    """test 'uint32_t HashTerminate()' - positive test case"""
     library = load_library("libhash.so")
     library.HashInit()
+
     result = library.HashTerminate()
     expected_result = ResultTest.HASH_ERROR_OK
+
     msg = "test_4_hash_terminate()", expected_result.name, ResultTest(result).name
     return result == expected_result.value, msg
 
 
 def test_5_hash_terminate():
+    """test 'uint32_t HashTerminate()' - negative test case (call the HashTerminate() without HashInit() before)"""
     library = load_library("libhash.so")
+
     result = library.HashTerminate()
     expected_result = ResultTest.HASH_ERROR_NOT_INITIALIZED
+
     msg = "test_5_hash_terminate()", expected_result.name, ResultTest(result).name
     return result == expected_result.value, msg
 
 
 def test_6_hash_terminate():
+    """test 'uint32_t HashTerminate()' - negative test case (an unexpected argument 'x')"""
     library = load_library("libhash.so")
     library.HashInit()
     x = ctypes.c_size_t(1)
+
     result = library.HashTerminate(x)
     expected_result = ResultTest.HASH_ERROR_EXCEPTION
+
     msg = "test_6_hash_terminate()", expected_result.name, ResultTest(result).name
     return result == expected_result.value, msg
 
 
 def test_7_hash_directory():
+    """test 'uint32_t HashDirectory(const char* directory, size_t* id)' - positive test case"""
     library = load_library("libhash.so")
     library.HashInit()
 
@@ -99,7 +120,6 @@ def test_7_hash_directory():
     library.HashDirectory.restype = ctypes.c_size_t
 
     path = "./tested_dir"
-    # transfer strig to UTF-8
     b_path = path.encode('utf-8')
     operation_id = ctypes.c_size_t(1)
 
@@ -111,6 +131,8 @@ def test_7_hash_directory():
 
 
 def test_8_hash_directory():
+    """test 'uint32_t HashDirectory(const char* directory, size_t* id)' - negative test case
+    (path to directory = None)"""
     library = load_library("libhash.so")
     library.HashInit()
 
@@ -129,6 +151,7 @@ def test_8_hash_directory():
 
 
 def test_9_hash_directory():
+    """test 'uint32_t HashDirectory(const char* directory, size_t* id)' - negative test case (id = None)"""
     library = load_library("libhash.so")
     library.HashInit()
 
@@ -138,7 +161,6 @@ def test_9_hash_directory():
     library.HashDirectory.restype = ctypes.c_size_t
 
     path = "./tested_dir"
-    # transfer strig to UTF-8
     b_path = path.encode('utf-8')
 
     result = library.HashDirectory(b_path, None)
@@ -149,6 +171,8 @@ def test_9_hash_directory():
 
 
 def test_10_hash_directory():
+    """test 'uint32_t HashDirectory(const char* directory, size_t* id)' - negative test case
+     (path to directory = None, id = None)"""
     library = load_library("libhash.so")
     library.HashInit()
 
@@ -165,6 +189,7 @@ def test_10_hash_directory():
 
 
 def test_11_hash_directory():
+    """test 'uint32_t HashDirectory(const char* directory, size_t* id)' - negative test case (operation_id = -1)"""
     library = load_library("libhash.so")
     library.HashInit()
 
@@ -174,7 +199,6 @@ def test_11_hash_directory():
     library.HashDirectory.restype = ctypes.c_size_t
 
     path = "./tested_dir"
-    # transfer strig to UTF-8
     b_path = path.encode('utf-8')
     operation_id = ctypes.c_size_t(-1)
 
@@ -186,6 +210,8 @@ def test_11_hash_directory():
 
 
 def test_12_hash_directory():
+    """test 'uint32_t HashDirectory(const char* directory, size_t* id)' - negative test case
+    (HashTerminate() before calling the HashDirectory())"""
     library = load_library("libhash.so")
     library.HashInit()
     library.HashTerminate()
@@ -196,7 +222,6 @@ def test_12_hash_directory():
     library.HashDirectory.restype = ctypes.c_size_t
 
     path = "./tested_dir"
-    # transfer strig to UTF-8
     b_path = path.encode('utf-8')
     operation_id = ctypes.c_size_t(1)
 
@@ -271,16 +296,16 @@ def test_12_hash_directory():
 #
 
 def main(test_suit):
-    counter = 0 #########
+    counter = 0
     for test in test_suit:
         test = test()
         if not test[0]:
             log_test_results(test[1])
-            counter += 1#######
+            counter += 1
         else:
             log.info("OK")
 
-    log.info("{} tests failed".format(counter))#####
+    log.info("{} tests failed".format(counter))
 
 
 tests_to_run = [
@@ -299,6 +324,4 @@ tests_to_run = [
 ]
 
 if __name__ == '__main__':
-    print(os.getcwd())
     main(tests_to_run)
-    print(os.getcwd())
