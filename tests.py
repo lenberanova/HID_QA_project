@@ -232,7 +232,8 @@ def test_12_hash_directory():
     return result == expected_result.value, msg
 
 
-# def test_7_hash_directory():
+# def test_13_hash_directory():
+#     """positive test case - still not working, in progress"""
 #     library = load_library("libhash.so")
 #     library.HashInit()
 #
@@ -242,10 +243,8 @@ def test_12_hash_directory():
 #     library.HashDirectory.restype = ctypes.c_size_t
 #
 #     path = "./tested_dir"
-#     # transfer strig to UTF-8
 #     b_path = path.encode('utf-8')
-#     operation_id = ctypes.c_size_t(1)  ####
-#
+#     operation_id = ctypes.c_size_t(1)
 #
 #     result_1 = library.HashDirectory(b_path, byref(operation_id))
 #     expected_result_1 = ResultTest.HASH_ERROR_OK
@@ -257,13 +256,12 @@ def test_12_hash_directory():
 #     running = ctypes.c_bool(True)
 #     while library.HashStatus(operation_id, byref(running)) == ResultTest.HASH_ERROR_OK and running:
 #         pass
-#     # expected_result_2 = ResultTest.HASH_ERROR_OK
 #
 #     library.HashReadNextLogLine.argtypes = [POINTER(ctypes.c_char_p)]
 #
 #     line = ctypes.c_char_p()
 #     result_x = library.HashReadNextLogLine(byref(line))
-#     while result_x == 0: #########
+#     while result_x == 0:
 #         line_value = str(line.value)
 #         line_value_split = line_value.split(" ")
 #         line_id = line_value_split[0][2:]
@@ -275,25 +273,23 @@ def test_12_hash_directory():
 #         # result type
 #         library.HashFree.restype = ctypes.c_size_t
 #         result_4 = library.HashFree(line)
-#         #expected_result_4 = ResultTest.HASH_ERROR_OK
 #
 #         time.sleep(0.1)
 #         result_x = library.HashReadNextLogLine(byref(line))
 #
-#     # # types of calling parameters
-#     # library.HashStop.argtypes = [ctypes.c_size_t]
-#     # # result type
-#     # library.HashStop.restype = ctypes.c_size_t
-#     # result_5 = library.HashStop(operation_id)
-#     # expected_result_5 = ResultTest.HASH_ERROR_OK
-#     #
-#     # # result_6 = library.HashTerminate()
-#     # expected_result_6 = ResultTest.HASH_ERROR_OK
+#     # types of calling parameters
+#     library.HashStop.argtypes = [ctypes.c_size_t]
+#     # result type
+#     library.HashStop.restype = ctypes.c_size_t
+#     result_5 = library.HashStop(operation_id)
+#     expected_result_5 = ResultTest.HASH_ERROR_OK
 #
+#     result_6 = library.HashTerminate()
+#     expected_result_6 = ResultTest.HASH_ERROR_OK
 #
-#     msg = "test_7_hash_directory()", expected_result_1.name, ResultTest(result_1).name
-#     return result_1 == expected_result_1.value, msg
-#
+#     msg = "test_13_hash_directory()", expected_result.name, ResultTest(result).name
+#     return result == expected_result.value, msg
+
 
 def main(test_suit):
     counter = 0
@@ -302,12 +298,14 @@ def main(test_suit):
         if not test[0]:
             log_test_results(test[1])
             counter += 1
+        #else - for better debugging, will be removed
         else:
             log.info("OK")
 
     log.info("{} tests failed".format(counter))
 
 
+# tests 7 and 11 -> core dump, in progress
 tests_to_run = [
     test_1_hash_init,
     test_2_hash_init,
