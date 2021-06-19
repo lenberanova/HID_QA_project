@@ -1,7 +1,10 @@
-2021-06-19 12:40:07,362 — test — ERROR — test2_invalidDirectory - expected result: HASH_ERROR_ARGUMENT_INVALID, actual result: HASH_ERROR_OK
-2021-06-19 12:40:07,914 — test — ERROR — test3_nonExistingDirectory - expected result: HASH_ERROR_ARGUMENT_INVALID, actual result: HASH_ERROR_OK
-2021-06-19 12:40:08,466 — test — ERROR — test4_checkCountOfHashedFiles - count of files in directory: 1,files hashed: 11
-2021-06-19 12:40:09,019 — test — ERROR — test5_checkNamesOfHashedFiles - comparism of file names failed
-2021-06-19 12:40:09,571 — test — ERROR — test6_checkHashesOfHashedFiles - comparism of file names failed
-2021-06-19 12:40:09,738 — test — ERROR — test7_checkIDsOfHashedFiles - ID b'1' is not unique identifier
-2021-06-19 12:40:09,738 — test — INFO — 6 tests failed
+2021-06-19 17:05:42,471 — test — ERROR — test2_checkCountOfHashedFiles - count of files in directory: 1,files hashed: 11
+2021-06-19 17:05:43,025 — test — ERROR — test3_checkNamesOfHashedFiles - comparison of file names failed
+2021-06-19 17:05:43,576 — test — ERROR — test4_checkHashesOfHashedFiles - comparison of file names failed
+2021-06-19 17:05:43,741 — test — ERROR — test5_checkIDsOfHashedFiles - ID b'1' is not unique identifier
+2021-06-19 17:05:43,741 — test — ERROR — test6_hashInitTwice - expected result: HASH_ERROR_ALREADY_INITIALIZED, actual result: HASH_ERROR_OK
+2021-06-19 17:05:44,325 — test — ERROR — test7_fileInsteadOfDirectory - expected result: HASH_ERROR_ARGUMENT_INVALID, actual result: HASH_ERROR_OK
+2021-06-19 17:05:44,874 — test — ERROR — test8_nonExistingDirectory - expected result: HASH_ERROR_ARGUMENT_INVALID, actual result: HASH_ERROR_OK
+2021-06-19 17:05:45,423 — test — ERROR — test11_hashStopTwice - expected result for hashStop valid once more: HASH_ERROR_EXCEPTION, actual result: HASH_ERROR_OK
+2021-06-19 17:05:46,530 — test — ERROR — test13_hashStopAfterTerminate - expected result for hashStop after hashTerminate: HASH_ERROR_NOT_INITIALIZED, actual result: HASH_ERROR_OK
+2021-06-19 17:05:46,530 — test — INFO — 9 tests failed
