@@ -1,7 +1,7 @@
-2021-06-19 12:24:38,365 — test — ERROR — test2_invalidDirectory - expected result: HASH_ERROR_ARGUMENT_INVALID, actual result: HASH_ERROR_OK
-2021-06-19 12:24:38,915 — test — ERROR — test3_nonExistingDirectory - expected result: HASH_ERROR_ARGUMENT_INVALID, actual result: HASH_ERROR_OK
-2021-06-19 12:24:39,466 — test — ERROR — test4_checkCountOfHashedFiles - count of files in directory: 1,files hashed: 11
-2021-06-19 12:24:40,016 — test — ERROR — test5_checkNamesOfHashedFiles - comparism of file names failed
-2021-06-19 12:24:40,569 — test — ERROR — test6_checkHashesOfHashedFiles - comparism of file names failed
-2021-06-19 12:24:40,736 — test — ERROR — test7_checkIDsOfHashedFiles - ID b'1' is not unique identifier
-2021-06-19 12:24:40,736 — test — INFO — 6 tests failed
+2021-06-19 12:40:07,362 — test — ERROR — test2_invalidDirectory - expected result: HASH_ERROR_ARGUMENT_INVALID, actual result: HASH_ERROR_OK
+2021-06-19 12:40:07,914 — test — ERROR — test3_nonExistingDirectory - expected result: HASH_ERROR_ARGUMENT_INVALID, actual result: HASH_ERROR_OK
+2021-06-19 12:40:08,466 — test — ERROR — test4_checkCountOfHashedFiles - count of files in directory: 1,files hashed: 11
+2021-06-19 12:40:09,019 — test — ERROR — test5_checkNamesOfHashedFiles - comparism of file names failed
+2021-06-19 12:40:09,571 — test — ERROR — test6_checkHashesOfHashedFiles - comparism of file names failed
+2021-06-19 12:40:09,738 — test — ERROR — test7_checkIDsOfHashedFiles - ID b'1' is not unique identifier
+2021-06-19 12:40:09,738 — test — INFO — 6 tests failed
