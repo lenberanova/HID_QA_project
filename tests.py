@@ -37,6 +37,8 @@ def logTestResults(testName, expRes, actRes, errMsg=None):
     ))
 
 
+# tests
+
 def test1_positiveTestCase():
     """positive test case - check the error code"""
     expectedReturnCode = 0
@@ -303,9 +305,6 @@ def test8_nonExistingDirectory():
         return False
 
 
-# directory HASH_ERROR_ARGUMENT_NULL 6
-
-
 def test9_missingHashInitBeforeHashDirectory():
     """check the error code after hashDirectory - not initialized before"""
     expectedReturnCode = 7
@@ -344,7 +343,6 @@ def test10_missingHashInitBeforeTerminate():
         print(e)
         return False
 
-# status -
 
 def test11_hashStopTwice():
     """check the error code after hashStop twice"""
@@ -431,6 +429,7 @@ def test13_hashStopAfterTerminate():
         print(e)
         return False
 
+
 def test14_hashTerminateTwice():
     """check the error code after hashTerminate twice"""
     expectedReturnCode = 7
@@ -459,9 +458,6 @@ def main(test_suit):
             result = test()
             if not result:
                 counter += 1
-            # else is here for better debugging
-            # else:
-            #     log.info("OK")
         except Exception as e:
             log.exception(e)
 
