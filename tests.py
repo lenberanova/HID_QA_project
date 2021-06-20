@@ -4,6 +4,10 @@ import wrapper
 import os
 from logger import log
 import hashlib
+import inspect
+
+inputLib = "libhash.so"
+inputDirectory = "./tested_dir"
 
 
 def readhashLog(library):
@@ -19,22 +23,14 @@ def readhashLog(library):
             break
     return hashedFilesLogLines
 
+
 def waitforHashDirectory(library, opID:int):
     while True:
         returnCode, opRunning = wrapper.hashStatus(library, opID)
-        if (int(returnCode) != 0) or (opRunning != True):
+        if int(returnCode) != 0 or not opRunning:
             break
     print('\nHashDirectory has finished.')
     return True, int(returnCode)
-
-
-def logTestResults(testName, expRes, actRes, errMsg=None):
-    log.error("{} - expected result: {}, actual result: {}, message: {}".format(
-        testName,
-        wrapper.ReturnCodes[expRes],
-        wrapper.ReturnCodes[actRes] if isinstance(actRes, int) else actRes,
-        errMsg if errMsg else ''
-    ))
 
 
 # tests
@@ -42,60 +38,82 @@ def logTestResults(testName, expRes, actRes, errMsg=None):
 def test1_positiveTestCase():
     """positive test case - check the error code"""
     expectedReturnCode = 0
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
-        wrapper.hashInit(lib)
-        returnCode, ID = wrapper.hashDirectory(lib, "./tested_dir")
-        if returnCode == 0:
-            ret, returnCode2 = waitforHashDirectory(lib, ID)
+        testPassed = False
+
+        lib = wrapper.loadHashLibrary(inputLib)
+        returnCodeI = wrapper.hashInit(lib)
+        if returnCodeI != expectedReturnCode:
+            log.error("{} - expected result hashInit: {}, actual result: {}".format(
+                testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeI]
+            ))
+        returnCodeD, ID = wrapper.hashDirectory(lib, inputDirectory)
+        if returnCodeD == 0:
+            ret, returnCodeW = waitforHashDirectory(lib, ID)
             if ret:
                 readhashLog(lib)
-                wrapper.hashStop(lib, ID)
-        wrapper.hashTerminate(lib)
-        if returnCode != expectedReturnCode:
-            log.error("test1_positiveTestCase - expected result: {}, actual result: {}".format(
-                wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCode]))
-            return False
+                returnCodeS = wrapper.hashStop(lib, ID)
+                if returnCodeS != expectedReturnCode:
+                    log.error("{} - expected result hashStop: {}, actual result: {}".format(
+                        testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeS]
+                    ))
+            if returnCodeW != expectedReturnCode:
+                log.error("{} - expected result waitforHashDirectory: {}, actual result: {}".format(
+                    testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeW]
+                ))
+            else:
+                testPassed = True
         else:
-            return True
+            log.error("{} - expected result hashDirectory: {}, actual result: {}".format(
+                testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeD]
+            ))
+
+        returnCodeT = wrapper.hashTerminate(lib)
+        if returnCodeT != expectedReturnCode:
+            log.error("{} - expected result hashTerminate: {}, actual result: {}".format(
+                testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeT]
+            ))
+        return testPassed
     except Exception as e:
-        log.exception("test1_positiveTestCase - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
 
 def test2_checkCountOfHashedFiles():
-    """check count of hashed files and count of files in tested directory, tested directiory must not be empty"""
-    testedDirectory = "./tested_dir"
-    files = []
-    with os.scandir(testedDirectory) as entries:
-        for entry in entries:
-            if entry.is_file():
-                files.append(entry.name)
-
+    """check count of hashed files and count of files in tested directory, tested directory must not be empty"""
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
+        testPassed = False
+
+        files = []
+        with os.scandir(inputDirectory) as entries:
+            for entry in entries:
+                if entry.is_file():
+                    files.append(entry.name)
+
+        lib = wrapper.loadHashLibrary(inputLib)
         wrapper.hashInit(lib)
-        returnCode, ID = wrapper.hashDirectory(lib, testedDirectory)
-        if returnCode == 0:
-            ret, returnCode2 = waitforHashDirectory(lib, ID)
+        returnCodeD, ID = wrapper.hashDirectory(lib, inputDirectory)
+
+        logLines = None
+        if returnCodeD == 0:
+            ret, returnCodeW = waitforHashDirectory(lib, ID)
             if ret:
                 logLines = readhashLog(lib)
                 wrapper.hashStop(lib, ID)
-        wrapper.hashTerminate(lib)
 
         if files and not logLines:
-            log.error("test2_checkCountOfHashedFiles - count of files in directory: {},files hashed: 0".format(len(files)))
-            return False
+            log.error("{} - count of files in directory: {},files hashed: 0".format(testName, len(files)))
         elif files and logLines and len(files) != len(logLines):
-            log.error("test2_checkCountOfHashedFiles - count of files in directory: {},files hashed: {}".format(
-                len(files), len(logLines)
-            ))
-            return False
+            log.error("{} - count of files in directory: {},files hashed: {}".format(testName, len(files), len(logLines)))
         else:
-            return True
+            testPassed = True
+        wrapper.hashTerminate(lib)
+        return testPassed
     except Exception as e:
-        log.exception("test4_checkCountOfHashedFiles - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
@@ -103,129 +121,142 @@ def test2_checkCountOfHashedFiles():
 def test3_checkNamesOfHashedFiles():
     """check count of hashed files and count of files in tested directory and compare them,
     tested directiory must not be empty"""
-    testedDirectory = "./tested_dir"
-    files = []
-    with os.scandir(testedDirectory) as entries:
-        for entry in entries:
-            if entry.is_file():
-                files.append(entry)
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
+        testPassed = False
+
+        files = []
+        with os.scandir(inputDirectory) as entries:
+            for entry in entries:
+                if entry.is_file():
+                    files.append(entry)
+        lib = wrapper.loadHashLibrary(inputLib)
         wrapper.hashInit(lib)
-        returnCode, ID = wrapper.hashDirectory(lib, testedDirectory)
-        if returnCode == 0:
-            ret, returnCode2 = waitforHashDirectory(lib, ID)
+        returnCodeD, ID = wrapper.hashDirectory(lib, inputDirectory)
+
+        logLines = []
+        if returnCodeD == 0:
+            ret, returnCodeW = waitforHashDirectory(lib, ID)
             if ret:
                 logLines = readhashLog(lib)
                 wrapper.hashStop(lib, ID)
+
+            actualHashedFiles = []
+            for logLine in logLines:
+                actualHashedFiles.append(logLine[1:])
+
+            calculatedHashedFiles = []
+            for file in files:
+                with open(file, "rb") as input_file:
+                    content = input_file.read()
+                    encoded_content = hashlib.md5(content)
+                    calculatedmd5 = encoded_content.hexdigest()
+                    # if "b'" at the begining is a bug
+                    # calculatedHashedFiles.append([file.name, calculatedmd5])
+                    calculatedHashedFiles.append(["b'" + file.name, "b'" + calculatedmd5])
+
+            # Comment:
+            # 1) I add string "b'" (I expect, it is not a bug, that the data in rows contains "b'" at the beginning),
+            # 2) file names contains / or /. (/rootfs-pkgs.txt)
+            # 3) this files are not from tested directoty
+
+            if sorted(calculatedmd5[0]) != sorted(actualHashedFiles[0]):
+                log.error("{} - comparison of file names failed".format(testName))
+            else:
+                testPassed = True
+
         wrapper.hashTerminate(lib)
-
-        actualHashedFiles = []
-        for logLine in logLines:
-            actualHashedFiles.append(logLine[1:])
-
-        calculatedHashedFiles = []
-        for file in files:
-            with open(file, "rb") as input_file:
-                content = input_file.read()
-                encoded_content = hashlib.md5(content)
-                calculatedmd5 = encoded_content.hexdigest()
-                # if "b'" at the begining is a bug
-                # calculatedHashedFiles.append([file.name, calculatedmd5])
-                calculatedHashedFiles.append(["b'"+file.name, "b'"+calculatedmd5])
-
-        # Comment:
-        # 1) I add string "b'" (I expect, it is not a bug, that the data in rows contains "b'" at the beginning),
-        # 2) file names contains / or /. (/rootfs-pkgs.txt)
-        # 3) this files are not from tested directoty
-
-        if sorted(calculatedmd5[0]) != sorted(actualHashedFiles[0]):
-            log.error("test3_checkNamesOfHashedFiles - comparison of file names failed")
-            return False
+        return testPassed
     except Exception as e:
-        log.exception("test3_checkNamesOfHashedFiles - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
 
 def test4_checkHashesOfHashedFiles():
     """check MD5 hashes of hashed files and compare them with calculated hashes"""
-    testedDirectory = "./tested_dir"
-    files = []
-    with os.scandir(testedDirectory) as entries:
-        for entry in entries:
-            if entry.is_file():
-                files.append(entry)
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
+        testPassed = False
+
+        files = []
+        with os.scandir(inputDirectory) as entries:
+            for entry in entries:
+                if entry.is_file():
+                    files.append(entry)
+
+        lib = wrapper.loadHashLibrary(inputLib)
         wrapper.hashInit(lib)
-        returnCode, ID = wrapper.hashDirectory(lib, testedDirectory)
-        if returnCode == 0:
-            ret, returnCode2 = waitforHashDirectory(lib, ID)
+        returnCodeD, ID = wrapper.hashDirectory(lib, inputDirectory)
+        if returnCodeD == 0:
+            ret, returnCodeW = waitforHashDirectory(lib, ID)
             if ret:
                 logLines = readhashLog(lib)
                 wrapper.hashStop(lib, ID)
-        wrapper.hashTerminate(lib)
 
-        actualHashedFiles = []
-        for logLine in logLines:
-            actualHashedFiles.append(logLine[1:])
+                actualHashedFiles = []
+                for logLine in logLines:
+                    actualHashedFiles.append(logLine[1:])
 
-        calculatedHashedFiles = []
-        for file in files:
-            with open(file, "rb") as input_file:
-                content = input_file.read()
-                encoded_content = hashlib.md5(content)
-                calculatedmd5 = encoded_content.hexdigest()
-                # calculatedHashedFiles.append([file.name, calculatedmd5])
-                calculatedHashedFiles.append(["b'"+file.name, "b'"+calculatedmd5])
+                calculatedHashedFiles = []
+                for file in files:
+                    with open(file, "rb") as input_file:
+                        content = input_file.read()
+                        encoded_content = hashlib.md5(content)
+                        calculatedmd5 = encoded_content.hexdigest()
+                        # calculatedHashedFiles.append([file.name, calculatedmd5])
+                        calculatedHashedFiles.append(["b'" + file.name, "b'" + calculatedmd5])
 
-        # Comment:
-        # hash MD5 - usually 32 lowercase hexadecimal digits ('d48691948fc6267bf5bc3715382e5ba4'),
-        # here I can see in debug mode this format: b'FFF094F5139CA6F3EE01BC94F4E3A3'
-        # now the test can not pass, files are not from tested direcotry
+                # Comment:
+                # hash MD5 - usually 32 lowercase hexadecimal digits ('d48691948fc6267bf5bc3715382e5ba4'),
+                # here I can see in debug mode this format: b'FFF094F5139CA6F3EE01BC94F4E3A3'
+                # now the test can not pass, files are not from tested direcotry
 
-        if sorted(calculatedmd5[0]) == sorted(actualHashedFiles[0]):
-            if sorted(calculatedmd5[1]) != sorted(actualHashedFiles[1]):
-                log.error("test4_checkHashesOfHashedFiles - comparison of hashes failed")
-                return False
-            else:
-                return True
-        else:
-            log.error("test4_checkHashesOfHashedFiles - comparison of file names failed")
-            return False
+                if sorted(calculatedmd5[0]) == sorted(actualHashedFiles[0]):
+                    if sorted(calculatedmd5[1]) != sorted(actualHashedFiles[1]):
+                        log.error("{} - comparison of hashes failed".format(testName))
+                    else:
+                        testPassed = True
+                else:
+                    log.error("{} - comparison of file names failed".format(testName))
+            wrapper.hashTerminate(lib)
+            return testPassed
     except Exception as e:
-        log.exception("test4_checkHashesOfHashedFiles - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
 
 def test5_checkIDsOfHashedFiles():
     """check if IDs (identifier of the operation) in output are unique"""
-    testedDirectory = "/home/lenka/PycharmProjects/pythonProject_HID/tested_dir"
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
+        testPassed = False
+
+        lib = wrapper.loadHashLibrary(inputLib)
         wrapper.hashInit(lib)
-        returnCode, ID = wrapper.hashDirectory(lib, testedDirectory)
-        if returnCode == 0:
-            ret, returnCode2 = waitforHashDirectory(lib, ID)
+        returnCodeD, ID = wrapper.hashDirectory(lib, inputDirectory)
+
+        if returnCodeD == 0:
+            ret, returnCodeW = waitforHashDirectory(lib, ID)
             if ret:
                 logLines = readhashLog(lib)
                 wrapper.hashStop(lib, ID)
+
+                actualHashedFilesIDs = []
+                for logLine in logLines:
+                    actualHashedFilesIDs.append(logLine[0])
+
+                for identifier in actualHashedFilesIDs:
+                    if actualHashedFilesIDs.count(identifier) != 1:
+                        log.error("{} - ID {} is not unique identifier".format(testName, identifier))
+                        break
+                    else:
+                        testPassed = True
         wrapper.hashTerminate(lib)
-
-        actualHashedFilesIDs = []
-        for logLine in logLines:
-            actualHashedFilesIDs.append(logLine[0])
-
-        for identifier in actualHashedFilesIDs:
-            if actualHashedFilesIDs.count(identifier) != 1:
-                log.error("test5_checkIDsOfHashedFiles - ID {} is not unique identifier".format(identifier))
-                return False
-            else:
-                return True
+        return testPassed
     except Exception as e:
-        log.exception("test5_checkIDsOfHashedFiles - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
@@ -235,20 +266,24 @@ def test5_checkIDsOfHashedFiles():
 def test6_hashInitTwice():
     """check the error code after second hashInit"""
     expectedReturnCode = 8
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
+        testPassed = False
+
+        lib = wrapper.loadHashLibrary(inputLib)
         wrapper.hashInit(lib)
-        returnCode = wrapper.hashInit(lib)
-        wrapper.hashTerminate(lib)
-        if returnCode != expectedReturnCode:
-            log.error("test6_hashInitTwice - expected result: {}, actual result: {}".format(
-                wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCode]
+        returnCodeI = wrapper.hashInit(lib)
+
+        if returnCodeI != expectedReturnCode:
+            log.error("{} - expected result hashInit: {}, actual result: {}".format(
+                testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeI]
             ))
-            return False
         else:
-            return True
+            testPassed = True
+        wrapper.hashTerminate(lib)
+        return testPassed
     except Exception as e:
-        log.exception("test6_hashInitTwice - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
@@ -256,25 +291,30 @@ def test6_hashInitTwice():
 def test7_fileInsteadOfDirectory():
     """testedDirectory is not a directory (is path to file)  - check the error code"""
     expectedReturnCode = 5
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
+        testPassed = False
+
+        lib = wrapper.loadHashLibrary(inputLib)
         wrapper.hashInit(lib)
-        returnCode, ID = wrapper.hashDirectory(lib,  "./tested_dir/HID_QA_TestSpecification.pdf")
-        if returnCode == 0:
-            ret, returnCode2 = waitforHashDirectory(lib, ID)
+        returnCodeD, ID = wrapper.hashDirectory(lib,  "./tested_dir/HID_QA_TestSpecification.pdf")
+        if returnCodeD == 0:
+            ret, returnCodeW = waitforHashDirectory(lib, ID)
             if ret:
                 readhashLog(lib)
                 wrapper.hashStop(lib, ID)
-        wrapper.hashTerminate(lib)
-        if returnCode != expectedReturnCode:
-            log.error("test7_fileInsteadOfDirectory - expected result: {}, actual result: {}".format(
-                wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCode]
+
+        if returnCodeD != expectedReturnCode:
+            log.error("{} - expected result hashDirectory: {}, actual result: {}".format(
+                testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeD]
             ))
-            return False
         else:
-            return True
+            testPassed = True
+
+        wrapper.hashTerminate(lib)
+        return testPassed
     except Exception as e:
-        log.exception("test7_fileInsteadOfDirectory - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
@@ -282,25 +322,29 @@ def test7_fileInsteadOfDirectory():
 def test8_nonExistingDirectory():
     """testedDirectory does not exist - check the error code"""
     expectedReturnCode = 5
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
+        testPassed = False
+
+        lib = wrapper.loadHashLibrary(inputLib)
         wrapper.hashInit(lib)
-        returnCode, ID = wrapper.hashDirectory(lib, "./dir_none")
-        if returnCode == 0:
-            ret, returnCode2 = waitforHashDirectory(lib, ID)
+        returnCodeD, ID = wrapper.hashDirectory(lib, "./dir_none")
+        if returnCodeD == 0:
+            ret, returnCodeW = waitforHashDirectory(lib, ID)
             if ret:
                 readhashLog(lib)
                 wrapper.hashStop(lib, ID)
+
+                if returnCodeD != expectedReturnCode:
+                    log.error("{} - expected result hashDirectory: {}, actual result: {}".format(
+                    testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeD]
+                    ))
+                else:
+                    testPassed = True
         wrapper.hashTerminate(lib)
-        if returnCode != expectedReturnCode:
-            log.error("test8_nonExistingDirectory - expected result: {}, actual result: {}".format(
-                wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCode2]
-            ))
-            return False
-        else:
-            return True
+        return testPassed
     except Exception as e:
-        log.exception("test8_nonExistingDirectory - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
@@ -308,19 +352,19 @@ def test8_nonExistingDirectory():
 def test9_missingHashInitBeforeHashDirectory():
     """check the error code after hashDirectory - not initialized before"""
     expectedReturnCode = 7
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
-        returnCode, ID = wrapper.hashDirectory(lib, "./tested_dir")
+        lib = wrapper.loadHashLibrary(inputLib)
+        returnCodeD, ID = wrapper.hashDirectory(lib, inputDirectory)
 
-        if returnCode != expectedReturnCode:
-            log.error("test9_missingHashInitBeforeHashDirectory - expected result: {}, actual result: {}".format(
-                wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCode]
+        if returnCodeD != expectedReturnCode:
+            log.error("{} - expected result hashDirectory: {}, actual result: {}".format(
+                testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeD]
             ))
             return False
-        else:
-            return True
+        return True
     except Exception as e:
-        log.exception("test9_missingHashInitBeforeHashDirectory - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
@@ -328,45 +372,50 @@ def test9_missingHashInitBeforeHashDirectory():
 def test10_missingHashInitBeforeTerminate():
     """check the error code after hashTerminete - missing hashInit before"""
     expectedReturnCode = 7
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
         lib = wrapper.loadHashLibrary("libhash.so")
-        returnCode = wrapper.hashTerminate(lib)
-        if returnCode != expectedReturnCode:
-            log.error("test10_missingHashInitBeforeTerminate - expected result: {}, actual result: {}".format(
-                wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCode]
+        returnCodeT = wrapper.hashTerminate(lib)
+        if returnCodeT != expectedReturnCode:
+            log.error("{} - expected result hashTerminate: {}, actual result: {}".format(
+                testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeT]
             ))
             return False
-        else:
-            return True
+        return True
     except Exception as e:
-        log.exception("test10_missingHashInitBeforeTerminate - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
 
 def test11_hashStopTwice():
     """check the error code after hashStop twice"""
-    expectedReturnCode = 2 # here I am not sure, if this code is well
+    expectedReturnCode = 5
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
+        testPassed = False
+
+        lib = wrapper.loadHashLibrary(inputLib)
         wrapper.hashInit(lib)
-        returnCode, ID = wrapper.hashDirectory(lib, "./tested_dir")
-        if returnCode == 0:
-            ret, returnCode2 = waitforHashDirectory(lib, ID)
+        returnCodeD, ID = wrapper.hashDirectory(lib, inputDirectory)
+
+        if returnCodeD == 0:
+            ret, returnCodeW = waitforHashDirectory(lib, ID)
             if ret:
                 readhashLog(lib)
                 wrapper.hashStop(lib, ID)
-                returnCode3 = wrapper.hashStop(lib, ID)
+                returnCodeS = wrapper.hashStop(lib, ID)
+
+                if returnCodeS != expectedReturnCode:
+                    log.error("{} - expected result for second hashStop (valid): {}, actual result: {}".format(
+                        testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeS]
+                    ))
+                else:
+                    testPassed = True
         wrapper.hashTerminate(lib)
-        if returnCode3 != expectedReturnCode:
-            log.error("test11_hashStopTwice - expected result for hashStop valid once more: {}, actual result: {}".format(
-                wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCode]
-            ))
-            return False
-        else:
-            return True
+        return testPassed
     except Exception as e:
-        log.exception("test11_hashStopTwice - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
@@ -374,58 +423,67 @@ def test11_hashStopTwice():
 def test12_hashStopInvalidID():
     """check the error code after hashStop with invalid ID"""
     expectedReturnCode = 5
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
+        testPassed = False
+
+        lib = wrapper.loadHashLibrary(inputLib)
         wrapper.hashInit(lib)
-        returnCode, ID = wrapper.hashDirectory(lib, "./tested_dir")
-        if returnCode == 0:
-            ret, returnCode2 = waitforHashDirectory(lib, ID)
+        returnCodeD, ID = wrapper.hashDirectory(lib, inputDirectory)
+        if returnCodeD == 0:
+            ret, returnCodeW = waitforHashDirectory(lib, ID)
             if ret:
                 readhashLog(lib)
-                returnCode3 = wrapper.hashStop(lib, 2)
-                returnCode4 = wrapper.hashStop(lib, ID)
+                returnCodeS = wrapper.hashStop(lib, 2)
+                returnCodeS2 = wrapper.hashStop(lib, ID)
+
+                if returnCodeS != expectedReturnCode:
+                    log.error("{} - expected result hashStop (invalid): {}, actual result: {}".format(
+                        testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeS]
+                    ))
+                if returnCodeS2 != 0:
+                    log.error("{} - expected result for second hashStop (valid): {}, actual result: {}".format(
+                        testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeS2]
+                    ))
+                if returnCodeS == expectedReturnCode and returnCodeS2 == 0:
+                    testPassed = True
+
         wrapper.hashTerminate(lib)
-        if returnCode3 != expectedReturnCode:
-            log.error("test12_hashStopInvalidID - expected result: {}, actual result: {}".format(
-                wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCode]
-            ))
-            return False
-        if returnCode4 != 0:
-            log.error("test12_hashStopInvalidID - expected result for second hashStop (valid): {}, actual result: {}".format(
-                wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCode]
-            ))
-            return False
-        else:
-            return True
+        return testPassed
     except Exception as e:
-        log.exception("test12_hashStopInvalidID - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
 
 def test13_hashStopAfterTerminate():
     """check the error code - hashStop after hashTerminate"""
-    expectedReturnCode = 7
+    expectedReturnCode = 5
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
+        testPassed = False
+
+        lib = wrapper.loadHashLibrary(inputLib)
         wrapper.hashInit(lib)
-        returnCode, ID = wrapper.hashDirectory(lib, "./tested_dir")
-        if returnCode == 0:
-            ret, returnCode2 = waitforHashDirectory(lib, ID)
+        returnCodeD, ID = wrapper.hashDirectory(lib, inputDirectory)
+        if returnCodeD == 0:
+            ret, returnCodeW = waitforHashDirectory(lib, ID)
             if ret:
                 readhashLog(lib)
                 wrapper.hashStop(lib, ID)
+                wrapper.hashTerminate(lib)
+                returnCodeS = wrapper.hashStop(lib, ID)
+
+                if returnCodeS != expectedReturnCode:
+                    log.error("{} - expected result for hashStop after hashTerminate: {}, actual result: {}".format(
+                        testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeS]
+                    ))
+                else:
+                    testPassed = True
         wrapper.hashTerminate(lib)
-        returnCode3 = wrapper.hashStop(lib, ID)
-        if returnCode3 != expectedReturnCode:
-            log.error("test13_hashStopAfterTerminate - expected result for hashStop after hashTerminate: {}, actual result: {}".format(
-                wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCode]
-            ))
-            return False
-        else:
-            return True
+        return testPassed
     except Exception as e:
-        log.exception("test13_hashStopAfterTerminate - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
@@ -433,20 +491,20 @@ def test13_hashStopAfterTerminate():
 def test14_hashTerminateTwice():
     """check the error code after hashTerminate twice"""
     expectedReturnCode = 7
+    testName = inspect.getframeinfo(inspect.currentframe()).function
     try:
-        lib = wrapper.loadHashLibrary("libhash.so")
+        lib = wrapper.loadHashLibrary(inputLib)
         wrapper.hashInit(lib)
         wrapper.hashTerminate(lib)
-        returnCode = wrapper.hashTerminate(lib)
-        if returnCode != expectedReturnCode:
-            log.error("test14_hashTerminateTwice - expected result: {}, actual result: {}".format(
-                wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCode]
+        returnCodeT = wrapper.hashTerminate(lib)
+        if returnCodeT != expectedReturnCode:
+            log.error("{} - expected  hashTerminate: {}, actual result: {}".format(
+                testName, wrapper.ReturnCodes[expectedReturnCode], wrapper.ReturnCodes[returnCodeT]
             ))
             return False
-        else:
-            return True
+        return True
     except Exception as e:
-        log.exception("test14_hashTerminateTwice - {}".format(e))
+        log.exception("{} - {}".format(testName, e))
         print(e)
         return False
 
@@ -458,6 +516,8 @@ def main(test_suit):
             result = test()
             if not result:
                 counter += 1
+            else:
+                log.info("ok")
         except Exception as e:
             log.exception(e)
 
