@@ -516,8 +516,6 @@ def main(test_suit):
             result = test()
             if not result:
                 counter += 1
-            else:
-                log.info("ok")
         except Exception as e:
             log.exception(e)
 
